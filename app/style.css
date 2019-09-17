@@ -1,0 +1,42 @@
+* {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif;
+}
+
+.logo {
+    background: url('https://s3.amazonaws.com/cdn.freshservice.com/data/helpdesk/attachments/production/11000045001/logo/50402478_597485107367822_6495635670055256064_n.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAIDQH3JYDERX5MLGQ%2F20190206%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20190206T043727Z&X-Amz-Expires=604800&X-Amz-Signature=1e64a2c669d2bef7b670c1014b36133aba4588533d0e60f6a77ad80f93c01e79&X-Amz-SignedHeaders=Host');
+    background-repeat: no-repeat;
+    background-size: contain;
+    background-position: center;
+    height: 25px;
+    margin-top: 25px;
+}
+
+p {
+    text-align: center;
+}
+
+.a-btn {
+    display: inline-block;
+    padding: 7px 14px;
+    margin-top: 10px;
+    margin-bottom: 0;
+    font-size: 13px;
+    line-height: 16px;
+    text-align: center;
+    vertical-align: middle;
+    cursor: pointer;
+    border-radius: 2px;
+    background: #24364a;
+    color: #fff;
+    padding-left: 20px;
+    padding-right: 20px;
+    font-weight: normal;
+    border: 1px solid #24364a;
+    text-decoration: none !important;
+}
+
+.a-btn:hover {
+    background-color: #141c30;
+    border-color: #141c30;
+    color: #fff;
+}
