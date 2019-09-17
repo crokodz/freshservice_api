@@ -24,37 +24,45 @@
         }
         return _v;
     };
-    //This method gets the value of associated child tickets and prints the details of the first child ticket.
+
     getData = function() {
         var $targetContainer = $(targetContainer);
         $(targetContainer).empty();
         clientAPP.data.get("recentChildTickets")
-            .then(function(data) {
-                console.log("Data", data);
-                if (data["recentChildTickets"].length) {
-                    $.each(data["recentChildTickets"][0], function(_k, _v) {
-                        $label = $("<label>");
-                        $label.html(_k).addClass("info");
-                        $value = $("<label>");
-                        $value.html(flattenToString(_v)).addClass("value");
-                        $li = $("<li class='clearfix'>");
-                        $li.append($label).append($value);
-                        $targetContainer.append($li);
+            .then(
+                function(data) {
+                    if (data["recentChildTickets"].length) {
+                        $.each(data["recentChildTickets"][0], function(_k, _v) {
+                            $label = $("<label>");
+                            $label.html(_k).addClass("info");
+                            $value = $("<label>");
+                            $value.html(flattenToString(_v)).addClass("value");
+                            $li = $("<li class='clearfix'>");
+                            $li.append($label).append($value);
+                            $targetContainer.append($li);
+                        });
+                    }
+                },
+                function(error) {
+                    clientAPP.instance.send({
+                        message: {
+                            note: 'Error was: ' + error, 
+                            type: 'notify'
+                        }
                     });
                 }
-
-            })
-            .catch(function(e) {
-                console.log('Exception - ', e);
-            });
+            );
     };
 
     $("#addToNotes").on("click", function() {
         data = clientAPP.data.get("ticket")
-            .then(function(ticketData) {
+            .then(function() {
                 var outputDiv = document.getElementById('output');
                 clientAPP.instance.send({
-                    message: {note: outputDiv.innerHTML}
+                    message: {
+                        note: outputDiv.innerHTML,
+                        type: 'note'
+                    }
                 });
                 clientAPP.instance.close();
         });
@@ -62,63 +70,67 @@
 
     setLocation = function(map, origin, destination, marker1, marker2){
         var bounds = new google.maps.LatLngBounds;
-        var markersArray = [];
-
-        var destinationIcon = 'https://chart.googleapis.com/chart?' +
-            'chst=d_map_pin_letter&chld=D|FF0000|000000';
-        var originIcon = 'https://chart.googleapis.com/chart?' +
-            'chst=d_map_pin_letter&chld=O|FFFF00|000000';
         marker1.setPosition(origin);
         marker2.setPosition(destination);
-
         var geocoder = new google.maps.Geocoder;
-
         var service = new google.maps.DistanceMatrixService;    
         service.getDistanceMatrix({
-          origins: [origin],
-          destinations: [destination],
-          travelMode: 'DRIVING',
-          unitSystem: google.maps.UnitSystem.METRIC,
-          avoidHighways: false,
-          avoidTolls: false
+            origins: [origin],
+            destinations: [destination],
+            travelMode: 'DRIVING',
+            unitSystem: google.maps.UnitSystem.METRIC,
+            avoidHighways: false,
+            avoidTolls: false
         }, function(response, status) {
-          if (status !== 'OK') {
-            console.log("Data", 'Error was: ' + status);
-          } else {
-            var originList = response.originAddresses;
-            var destinationList = response.destinationAddresses;
-            var outputDiv = document.getElementById('output');
-            outputDiv.innerHTML = '';
+            if (status !== 'OK') {
+                clientAPP.instance.send({
+                    message: {
+                        note: 'Error was: ' + status, 
+                        type: 'notify'
+                    }
+                });
+            } else {
+                var originList = response.originAddresses;
+                var destinationList = response.destinationAddresses;
+                var outputDiv = document.getElementById('output');
+                outputDiv.innerHTML = '';
 
-            var showGeocodedAddressOnMap = function(asDestination) {
-              var icon = asDestination ? destinationIcon : originIcon;
-              return function(results, status) {
-                if (status === 'OK') {
-                  map.fitBounds(bounds.extend(results[0].geometry.location));
-                } else {
-                  console.log("Data", 'Geocode was not successful due to: ' + status);
+                var showGeocodedAddressOnMap = function() {
+                    return function(results, status) {
+                        if (status === 'OK') {
+                            map.fitBounds(bounds.extend(results[0].geometry.location));
+                        } else {
+                            clientAPP.instance.send({
+                                message: {
+                                    note: 'Geocode was not successful due to: ' + status, 
+                                    type: 'notify'
+                                }
+                            });
+                        }
+                    };
+                };
+
+                for (var i = 0; i < originList.length; i++) {
+                    var results = response.rows[i].elements;
+                    geocoder.geocode({'address': originList[i]},
+                    showGeocodedAddressOnMap(false));
+                    for (var j = 0; j < results.length; j++) {
+                        if (results[j].status == 'ZERO_RESULTS') {
+                            outputDiv.innerHTML += '<span style="font-size: 15px;font-weight:bold;color:red">Route not found.</span>';
+                        } else {
+                            geocoder.geocode({'address': destinationList[j]},
+                            showGeocodedAddressOnMap(true));
+                            outputDiv.innerHTML += 'From: ' + originList[i] + '<br>To: ' + destinationList[j] +
+                            '<br    ><span style="font-size: 15px;font-weight:bold">' + results[j].distance.text + ' in ' +
+                            results[j].duration.text + '</span><br>';
+                        }
+                    }
                 }
-              };
-            };
-
-            for (var i = 0; i < originList.length; i++) {
-              var results = response.rows[i].elements;
-              geocoder.geocode({'address': originList[i]},
-                  showGeocodedAddressOnMap(false));
-              for (var j = 0; j < results.length; j++) {
-                geocoder.geocode({'address': destinationList[j]},
-                    showGeocodedAddressOnMap(true));
-                outputDiv.innerHTML += 'From: ' + originList[i] + '<br>To: ' + destinationList[j] +
-                    '<br    ><span style="font-size: 15px;font-weight:bold">' + results[j].distance.text + ' in ' +
-                    results[j].duration.text + '</span><br>';
-              }
             }
-          }
         });
     };
 
     initMap = function () {
-        var markersArray = [];
         var originLat = parseFloat(localStorage.getItem("originLat"));
         var originLng = parseFloat(localStorage.getItem("originLng"));
 
@@ -132,7 +144,6 @@
         var dlng = destinationLng ? destinationLng : 151.2080774;
 
         var origin = {lat: olat, lng: olng};
-        console.log("xxx",origin);
         var destination = {lat: dlat, lng: dlng};
         var map = new google.maps.Map(document.getElementById('map'), {
           center: origin,
@@ -167,7 +178,18 @@
     };
 
     $(document).ready(function() {
-        app.initialized().then(initModal);
+        app.initialized().then(
+            initModal
+            ,
+            function(error) {
+                clientAPP.instance.send({
+                    message: {
+                        note: 'Error was: ' + error, 
+                        type: 'notify'
+                    }
+                });
+            }
+        );
         localStorage.removeItem("originLat");
         localStorage.removeItem("destinationLat");
         localStorage.removeItem("originLng");
